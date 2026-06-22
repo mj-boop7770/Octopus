@@ -1,0 +1,19 @@
+name: my_tunnel_app
+description: Application de tunnel personnalisé V2Ray.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Le module magique qui intègre le noyau Xray/V2Ray en Go
+  flutter_v2ray: ^1.2.0 
+
+flutter:
+  uses-material-design: true
+  # On indique à Flutter que l'application va utiliser un fichier texte de config
+  assets:
+    - assets/config.json
+    
