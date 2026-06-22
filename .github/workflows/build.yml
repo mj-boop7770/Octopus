@@ -1,0 +1,37 @@
+name: Build Octopus APK
+
+on:
+  push:
+    branches: [ main, master ] # Se lance dès que tu modifies ton code
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Recuperer le code
+      uses: actions/checkout@v3
+
+    - name: Installer Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Installer Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+
+    - name: Telecharger les modules
+      run: flutter pub get
+
+    - name: Compiler l'APK
+      run: flutter build apk --release --no-tree-shake-icons
+
+    - name: Rendre l'APK disponible
+      uses: actions/upload-artifact@v3
+      with:
+        name: Octopus-APK
+        path: build/app/outputs/flutter-apk/app-release.apk
+        
