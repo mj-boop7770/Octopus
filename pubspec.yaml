@@ -1,28 +1,17 @@
-{
-pubspec.yaml  "inbounds": [{
-    "port": 10808,
-    "protocol": "socks",
-    "settings": { "auth": "noauth", "udp": true }
-  }],
-  "outbounds": [{
-    "protocol": "vless",
-    "settings": {
-      "vnext": [{
-        "address": "ton-serveur-vps.com",
-        "port": 443,
-        "users": [{ "id": "ton-uuid-unique-ici", "encryption": "none" }]
-      }]
-    },
-    "streamSettings": {
-      "network": "tcp",
-      "security": "reality",
-      "realitySettings": {
-        "show": false,
-        "dest": "api.movitel.co.mz:443", 
-        "serverName": "api.movitel.co.mz",
-        "publicKey": "cle_publique_de_ton_serveur",
-        "shortId": "un_id_court_hex"
-      }
-    }
-  }]
-}
+name: octopus
+description: Application de tunnel personnalisé Octopus.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.12.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_v2ray: ^1.2.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/config.json
+    
