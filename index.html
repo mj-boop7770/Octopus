@@ -35,46 +35,44 @@ button{padding:.6rem 1rem;background:#0066CC;color:#fff;border:none;border-radiu
 <button onclick="envoyer()">➤</button>
 </footer>
 <script>
-const GROQ_KEY = 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;
-const MODEL = "llama-3.3-70b-versatile";
-const history = [{role:"system",content:"Tu es Octopus, un assistant IA personnel intelligent, créé par Mujos à Maputo, Mozambique. Tu réponds en français par défaut mais tu parles aussi portugais, anglais, swahili. Tu es direct, utile et amical."}];
+const MODEL="llama-3.3-70b-versatile";
+const history=[{role:"system",content:"Tu es Octopus, un assistant IA personnel intelligent, créé par Mujos à Maputo, Mozambique. Tu réponds en français par défaut mais tu parles aussi portugais, anglais, swahili. Tu es direct, utile et amical."}];
 
 async function envoyer(){
-  const inp = document.getElementById('inp');
-  const msg = inp.value.trim();
-  if(!msg) return;
-  inp.value = '';
-  ajouterMsg(msg, 'user');
-  history.push({role:"user", content:msg});
-  const loading = ajouterMsg("⏳ Réflexion...", 'bot loading');
+  const inp=document.getElementById('inp');
+  const msg=inp.value.trim();
+  if(!msg)return;
+  inp.value='';
+  ajouterMsg(msg,'user');
+  history.push({role:"user",content:msg});
+  const loading=ajouterMsg("⏳ Réflexion...",'bot loading');
   try{
-    const r = await fetch("https://api.groq.com/openai/v1/chat/completions",{
+    const r=await fetch("/api/chat",{
       method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ_KEY},
-      body:JSON.stringify({model:MODEL, messages:history, max_tokens:1024})
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:MODEL,messages:history,max_tokens:1024})
     });
-    const d = await r.json();
-    const rep = d.choices[0].message.content;
-    history.push({role:"assistant", content:rep});
-    loading.className = 'msg bot';
-    loading.innerText = rep;
+    const d=await r.json();
+    const rep=d.choices[0].message.content;
+    history.push({role:"assistant",content:rep});
+    loading.className='msg bot';
+    loading.innerText=rep;
   }catch(e){
-    loading.className = 'msg bot';
-    loading.innerText = "⚠️ Erreur de connexion. Réessaie.";
+    loading.className='msg bot';
+    loading.innerText="⚠️ Erreur de connexion. Réessaie.";
   }
-  document.getElementById('chat').scrollTop = 99999;
+  document.getElementById('chat').scrollTop=99999;
 }
 
-function ajouterMsg(texte, classe){
-  const c = document.getElementById('chat');
-  const d = document.createElement('div');
-  d.className = 'msg '+classe;
-  d.innerText = texte;
+function ajouterMsg(texte,classe){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');
+  d.className='msg '+classe;
+  d.innerText=texte;
   c.appendChild(d);
-  c.scrollTop = 99999;
+  c.scrollTop=99999;
   return d;
 }
 </script>
 </body>
-  </html>
-  
+</html>
