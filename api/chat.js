@@ -4,47 +4,16 @@ export default async function handler(req, res) {
   }
   try {
     const { messages, memoire } = req.body;
-    const tavilyKey = process.env.TAVILY_KEY;
     const userMsg = messages[messages.length - 1].content;
-
-    const needsWeb = /actualit|aujourd|news|météo|meteo|score|résultat|resultat|live|direct|maintenant|dernier|récent|recent/i.test(userMsg);
-
-    let webContext = "";
-    if (needsWeb && tavilyKey) {
-      try {
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), 3000);
-        const tavilyRes = await fetch("https://api.tavily.com/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            api_key: tavilyKey,
-            query: userMsg,
-            max_results: 2,
-            search_depth: "basic"
-          }),
-          signal: controller.signal
-        });
-        const tavilyData = await tavilyRes.json();
-        if (tavilyData.results?.length) {
-          webContext = tavilyData.results
-            .map(r => `${r.title}: ${r.content?.substring(0, 150)}`)
-            .join(" | ");
-        }
-      } catch(e) {
-        webContext = "";
-      }
-    }
 
     const mem = memoire || {};
     const systemPrompt = `Tu es Octopus 🐙, assistant IA personnel de ${mem.nom || 'Mujos'}, développeur autodidacte de ${mem.ville || 'Maputo'}, ${mem.pays || 'Mozambique'}.
 Projets : ${mem.projets || 'WorldCup2026, Octopus, Despacho Marítimo'}.
 Compétences : ${mem.competences || 'JavaScript, Python, GitHub Actions'}.
+Objectifs : ${mem.objectifs || 'réseau local, monétisation'}.
 Tu réponds en français par défaut, aussi en portugais, anglais, swahili.
-Tu es direct, intelligent, motivant.
-${webContext ? `Infos internet : ${webContext}` : ''}`;
-
-    const last5 = messages.slice(-5);
+Tu es direct, intelligent, motivant. Tu appelles ton créateur "Mujos".
+Sujets récents : ${mem.sujets || 'aucun'}.`;
 
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -56,7 +25,7 @@ ${webContext ? `Infos internet : ${webContext}` : ''}`;
         model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
-          ...last5.filter(m => m.role !== 'system')
+          ...messages.filter(m => m.role !== 'system')
         ],
         max_tokens: 1024
       })
@@ -68,4 +37,4 @@ ${webContext ? `Infos internet : ${webContext}` : ''}`;
     console.error(e);
     res.status(500).json({ error: "Erreur: " + e.message });
   }
-            }
+      }
