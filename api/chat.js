@@ -31,8 +31,7 @@ Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
           { role: "system", content: systemPrompt },
           ...req.body.messages.filter(m => m.role !== 'system')
         ],
-        max_tokens: 1024,
-        tools: [{ type: "web_search" }]
+        max_tokens: 1024
       })
     });
 
@@ -61,4 +60,4 @@ Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
     console.error(e);
     res.status(500).json({ error: "Erreur serveur: " + e.message });
   }
-                    }
+                  }
