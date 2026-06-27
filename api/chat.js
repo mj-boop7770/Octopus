@@ -5,19 +5,37 @@ export default async function handler(req, res) {
   try {
     const binId = process.env.JSONBIN_BIN_ID;
     const jsonbinKey = process.env.JSONBIN_KEY;
+
     const memRes = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
       headers: { 'X-Master-Key': jsonbinKey }
     });
     const memData = await memRes.json();
     const memoire = memData.record;
+
+    const userMsg = req.body.messages[req.body.messages.length - 1].content;
+
+    let webContext = "";
+    try {
+      const ddgRes = await fetch(
+        `https://api.duckduckgo.com/?q=${encodeURIComponent(userMsg)}&format=json&no_html=1&skip_disambig=1`
+      );
+      const ddgData = await ddgRes.json();
+      const abstract = ddgData.AbstractText || ddgData.Answer || "";
+      const related = ddgData.RelatedTopics?.slice(0,3).map(t => t.Text || "").join(" | ") || "";
+      if (abstract) webContext = `Info web trouvée : ${abstract}`;
+      else if (related) webContext = `Résultats web : ${related}`;
+    } catch(e) {
+      webContext = "";
+    }
+
     const systemPrompt = `Tu es Octopus 🐙, assistant IA personnel de ${memoire.utilisateur.nom}, développeur autodidacte de ${memoire.utilisateur.ville}, ${memoire.utilisateur.pays}. 
 Ses projets : ${memoire.utilisateur.projets.join(', ')}.
 Ses compétences : ${memoire.utilisateur.competences.join(', ')}.
 Ses objectifs : ${memoire.utilisateur.objectifs.join(', ')}.
 Tu réponds en français par défaut, aussi en portugais, anglais, swahili.
 Tu es direct, intelligent, motivant. Tu appelles ton créateur "${memoire.preferences_octopus.appelle_createur}".
-Tu peux chercher sur internet en temps réel pour donner des infos actualisées.
-Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.`;
+Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
+${webContext ? `\nContexte internet actuel : ${webContext}` : ''}`;
 
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -26,7 +44,7 @@ Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
         "Authorization": "Bearer " + process.env.GROQ_API_KEY
       },
       body: JSON.stringify({
-        model: "compound-beta",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
           ...req.body.messages.filter(m => m.role !== 'system')
@@ -36,12 +54,10 @@ Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
     });
 
     const data = await r.json();
-    const rep = data.choices[0].message.content;
 
     const sujets = memoire.conversations.sujets_recents || [];
-    const dernierMsg = req.body.messages[req.body.messages.length - 1].content;
-    if (!sujets.includes(dernierMsg.substring(0, 50))) {
-      sujets.unshift(dernierMsg.substring(0, 50));
+    if (!sujets.includes(userMsg.substring(0, 50))) {
+      sujets.unshift(userMsg.substring(0, 50));
       if (sujets.length > 10) sujets.pop();
       memoire.conversations.sujets_recents = sujets;
       memoire.conversations.derniere_session = new Date().toISOString().split('T')[0];
@@ -60,4 +76,4 @@ Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
     console.error(e);
     res.status(500).json({ error: "Erreur serveur: " + e.message });
   }
-                  }
+        }
