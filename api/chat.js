@@ -5,6 +5,7 @@ export default async function handler(req, res) {
   try {
     const binId = process.env.JSONBIN_BIN_ID;
     const jsonbinKey = process.env.JSONBIN_KEY;
+    const tavilyKey = process.env.TAVILY_KEY;
 
     const memRes = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
       headers: { 'X-Master-Key': jsonbinKey }
@@ -16,14 +17,22 @@ export default async function handler(req, res) {
 
     let webContext = "";
     try {
-      const ddgRes = await fetch(
-        `https://api.duckduckgo.com/?q=${encodeURIComponent(userMsg)}&format=json&no_html=1&skip_disambig=1`
-      );
-      const ddgData = await ddgRes.json();
-      const abstract = ddgData.AbstractText || ddgData.Answer || "";
-      const related = ddgData.RelatedTopics?.slice(0,3).map(t => t.Text || "").join(" | ") || "";
-      if (abstract) webContext = `Info web trouvée : ${abstract}`;
-      else if (related) webContext = `Résultats web : ${related}`;
+      const tavilyRes = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: tavilyKey,
+          query: userMsg,
+          max_results: 3,
+          search_depth: "basic"
+        })
+      });
+      const tavilyData = await tavilyRes.json();
+      if (tavilyData.results?.length) {
+        webContext = tavilyData.results
+          .map(r => `${r.title}: ${r.content}`)
+          .join(" | ");
+      }
     } catch(e) {
       webContext = "";
     }
@@ -35,7 +44,7 @@ Ses objectifs : ${memoire.utilisateur.objectifs.join(', ')}.
 Tu réponds en français par défaut, aussi en portugais, anglais, swahili.
 Tu es direct, intelligent, motivant. Tu appelles ton créateur "${memoire.preferences_octopus.appelle_createur}".
 Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
-${webContext ? `\nContexte internet actuel : ${webContext}` : ''}`;
+${webContext ? `\nInfos internet actuelles : ${webContext}` : ''}`;
 
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
