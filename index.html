@@ -19,6 +19,9 @@ footer{padding:.8rem;border-top:1px solid #0066CC;display:flex;gap:.5rem}
 textarea{flex:1;background:#111827;border:1px solid #0066CC;border-radius:8px;padding:.6rem;color:#F8FAFC;font-size:.85rem;resize:none;height:44px;outline:none}
 button{padding:.6rem 1rem;background:#0066CC;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.85rem}
 .octopus{font-size:2rem}
+.status{font-size:.6rem;margin-top:.2rem}
+.status.ok{color:#00A651}
+.status.warn{color:#F59E0B}
 </style>
 </head>
 <body>
@@ -26,6 +29,7 @@ button{padding:.6rem 1rem;background:#0066CC;color:#fff;border:none;border-radiu
 <div class="octopus">🐙</div>
 <h1>MUJOS OCTOPUS</h1>
 <p class="sub">Assistant IA Personnel · Powered by Groq</p>
+<p class="status" id="status">⏳ Chargement mémoire...</p>
 </header>
 <div id="chat">
 <div class="msg bot">Salut ! Je suis Octopus, ton assistant IA personnel. Comment puis-je t'aider aujourd'hui ? 🐙</div>
@@ -35,44 +39,70 @@ button{padding:.6rem 1rem;background:#0066CC;color:#fff;border:none;border-radiu
 <button onclick="envoyer()">➤</button>
 </footer>
 <script>
-const MODEL="llama-3.3-70b-versatile";
-const history=[{role:"system",content:"Tu es Octopus, un assistant IA personnel intelligent, créé par Mujos à Maputo, Mozambique. Tu réponds en français par défaut mais tu parles aussi portugais, anglais, swahili. Tu es direct, utile et amical."}];
+const history = [];
+let memoire = null;
+
+async function chargerMemoire(){
+  try{
+    const r = await fetch("/api/memory");
+    const d = await r.json();
+    memoire = {
+      nom: d.utilisateur?.nom || 'Mujos',
+      ville: d.utilisateur?.ville || 'Maputo',
+      pays: d.utilisateur?.pays || 'Mozambique',
+      projets: (d.utilisateur?.projets || []).join(', '),
+      competences: (d.utilisateur?.competences || []).join(', '),
+      sujets: (d.conversations?.sujets_recents || []).join(', ') || 'aucun'
+    };
+    const st = document.getElementById('status');
+    st.className = 'status ok';
+    st.innerText = '🟢 Mémoire active · Web search activé';
+  }catch(e){
+    memoire = {nom:'Mujos',ville:'Maputo',pays:'Mozambique',projets:'WorldCup2026, Octopus',competences:'JavaScript, Python',sujets:'aucun'};
+    const st = document.getElementById('status');
+    st.className = 'status warn';
+    st.innerText = '🟡 Mode basique actif';
+  }
+}
 
 async function envoyer(){
-  const inp=document.getElementById('inp');
-  const msg=inp.value.trim();
-  if(!msg)return;
-  inp.value='';
-  ajouterMsg(msg,'user');
-  history.push({role:"user",content:msg});
-  const loading=ajouterMsg("⏳ Réflexion...",'bot loading');
+  const inp = document.getElementById('inp');
+  const msg = inp.value.trim();
+  if(!msg || !memoire) return;
+  inp.value = '';
+  ajouterMsg(msg, 'user');
+  history.push({role:"user", content:msg});
+  const loading = ajouterMsg("⏳ Réflexion...", 'bot loading');
   try{
-    const r=await fetch("/api/chat",{
+    const r = await fetch("/api/chat",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:MODEL,messages:history,max_tokens:1024})
+      body:JSON.stringify({messages:history, memoire:memoire})
     });
-    const d=await r.json();
-    const rep=d.choices[0].message.content;
-    history.push({role:"assistant",content:rep});
-    loading.className='msg bot';
-    loading.innerText=rep;
+    const d = await r.json();
+    const rep = d.choices[0].message.content;
+    history.push({role:"assistant", content:rep});
+    if(history.length > 10) history.splice(0, 2);
+    loading.className = 'msg bot';
+    loading.innerText = rep;
   }catch(e){
-    loading.className='msg bot';
-    loading.innerText="⚠️ Erreur de connexion. Réessaie.";
+    loading.className = 'msg bot';
+    loading.innerText = "⚠️ Erreur de connexion. Réessaie.";
   }
-  document.getElementById('chat').scrollTop=99999;
+  document.getElementById('chat').scrollTop = 99999;
 }
 
-function ajouterMsg(texte,classe){
-  const c=document.getElementById('chat');
-  const d=document.createElement('div');
-  d.className='msg '+classe;
-  d.innerText=texte;
+function ajouterMsg(texte, classe){
+  const c = document.getElementById('chat');
+  const d = document.createElement('div');
+  d.className = 'msg '+classe;
+  d.innerText = texte;
   c.appendChild(d);
-  c.scrollTop=99999;
+  c.scrollTop = 99999;
   return d;
 }
+
+chargerMemoire();
 </script>
 </body>
 </html>
