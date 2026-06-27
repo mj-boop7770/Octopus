@@ -15,26 +15,34 @@ export default async function handler(req, res) {
 
     const userMsg = req.body.messages[req.body.messages.length - 1].content;
 
+    const needsWeb = /actualit|aujourd|news|météo|meteo|score|résultat|resultat|live|direct|maintenant|dernier|récent|recent/i.test(userMsg);
+
     let webContext = "";
-    try {
-      const tavilyRes = await fetch("https://api.tavily.com/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          api_key: tavilyKey,
-          query: userMsg,
-          max_results: 3,
-          search_depth: "basic"
-        })
-      });
-      const tavilyData = await tavilyRes.json();
-      if (tavilyData.results?.length) {
-        webContext = tavilyData.results
-          .map(r => `${r.title}: ${r.content}`)
-          .join(" | ");
+    if (needsWeb && tavilyKey) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+        const tavilyRes = await fetch("https://api.tavily.com/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            api_key: tavilyKey,
+            query: userMsg,
+            max_results: 2,
+            search_depth: "basic"
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        const tavilyData = await tavilyRes.json();
+        if (tavilyData.results?.length) {
+          webContext = tavilyData.results
+            .map(r => `${r.title}: ${r.content?.substring(0, 200)}`)
+            .join(" | ");
+        }
+      } catch(e) {
+        webContext = "";
       }
-    } catch(e) {
-      webContext = "";
     }
 
     const systemPrompt = `Tu es Octopus 🐙, assistant IA personnel de ${memoire.utilisateur.nom}, développeur autodidacte de ${memoire.utilisateur.ville}, ${memoire.utilisateur.pays}. 
@@ -85,4 +93,4 @@ ${webContext ? `\nInfos internet actuelles : ${webContext}` : ''}`;
     console.error(e);
     res.status(500).json({ error: "Erreur serveur: " + e.message });
   }
-        }
+}
