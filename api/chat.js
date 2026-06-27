@@ -16,7 +16,9 @@ Ses compétences : ${memoire.utilisateur.competences.join(', ')}.
 Ses objectifs : ${memoire.utilisateur.objectifs.join(', ')}.
 Tu réponds en français par défaut, aussi en portugais, anglais, swahili.
 Tu es direct, intelligent, motivant. Tu appelles ton créateur "${memoire.preferences_octopus.appelle_createur}".
+Tu peux chercher sur internet en temps réel pour donner des infos actualisées.
 Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.`;
+
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -24,16 +26,19 @@ Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
         "Authorization": "Bearer " + process.env.GROQ_API_KEY
       },
       body: JSON.stringify({
-        model: req.body.model,
+        model: "compound-beta",
         messages: [
           { role: "system", content: systemPrompt },
           ...req.body.messages.filter(m => m.role !== 'system')
         ],
-        max_tokens: req.body.max_tokens
+        max_tokens: 1024,
+        tools: [{ type: "web_search" }]
       })
     });
+
     const data = await r.json();
     const rep = data.choices[0].message.content;
+
     const sujets = memoire.conversations.sujets_recents || [];
     const dernierMsg = req.body.messages[req.body.messages.length - 1].content;
     if (!sujets.includes(dernierMsg.substring(0, 50))) {
@@ -50,9 +55,10 @@ Sujets récents : ${memoire.conversations.sujets_recents.join(', ') || 'aucun'}.
         body: JSON.stringify(memoire)
       });
     }
+
     res.status(200).json(data);
   } catch(e) {
     console.error(e);
     res.status(500).json({ error: "Erreur serveur: " + e.message });
   }
-        }
+                    }
